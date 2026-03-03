@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <script type="text/javascript" src="nsignutils.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    .applet {
+      width: 1920px;
+      height: 1080px;
+      position: relative;
+      background: #1a1a2e;
+      overflow: hidden;
+      font-family: sans-serif;
+    }
+
+    /* ── FONDO degradado ── */
+    .bg {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      z-index: 0;
+    }
+
+    /* ── TARJETA central ── */
+    .card {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 900px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 24px;
+      padding: 80px 90px;
+      z-index: 2;
+      backdrop-filter: blur(10px);
+    }
+
+    /* ── ETIQUETA "PRODUCTO" ── */
+    .badge {
+      display: inline-block;
+      background: #e94560;
+      color: #fff;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      padding: 8px 24px;
+      border-radius: 50px;
+      margin-bottom: 40px;
+    }
+
+    /* ── NOMBRE ARTÍCULO ── */
+    #campo-articulo {
+      display: block;
+      font-size: 72px;
+      font-weight: 800;
+      color: #ffffff;
+      line-height: 1.1;
+      margin-bottom: 30px;
+      letter-spacing: -1px;
+      min-height: 80px;
+      -webkit-transition: opacity 0.5s ease;
+      transition: opacity 0.5s ease;
+    }
+
+    /* ── SEPARADOR ── */
+    .sep {
+      width: 80px;
+      height: 4px;
+      background: #e94560;
+      border-radius: 2px;
+      margin-bottom: 30px;
+    }
+
+    /* ── PRECIO ── */
+    .precio-wrap {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .precio-simbolo {
+      font-size: 36px;
+      font-weight: 700;
+      color: #e94560;
+    }
+
+    #campo-precio {
+      font-size: 96px;
+      font-weight: 800;
+      color: #e94560;
+      line-height: 1;
+      min-height: 100px;
+      -webkit-transition: opacity 0.5s ease;
+      transition: opacity 0.5s ease;
+    }
+
+    .precio-label {
+      font-size: 24px;
+      color: rgba(255,255,255,0.5);
+      margin-left: 10px;
+      align-self: flex-end;
+      padding-bottom: 10px;
+    }
+
+    /* ── ID BADGE (debug, opcional) ── */
+    .id-badge {
+      position: absolute;
+      top: 40px;
+      right: 60px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      padding: 8px 20px;
+      font-size: 20px;
+      color: rgba(255,255,255,0.4);
+      z-index: 3;
+    }
+
+    /* ── ESTADO: loading / error ── */
+    .status {
+      position: absolute;
+      bottom: 40px;
+      left: 60px;
+      font-size: 18px;
+      color: rgba(255,255,255,0.25);
+      z-index: 3;
+    }
+
+    /* ── ANIMACIÓN ENTRADA ── */
+    @-webkit-keyframes fadeSlideUp {
+      0%   { opacity: 0; -webkit-transform: translate(-50%, -45%); }
+      100% { opacity: 1; -webkit-transform: translate(-50%, -50%); }
+    }
+    @keyframes fadeSlideUp {
+      0%   { opacity: 0; transform: translate(-50%, -45%); }
+      100% { opacity: 1; transform: translate(-50%, -50%); }
+    }
+
+    .card {
+      opacity: 0;
+      -webkit-animation: fadeSlideUp 0.8s ease 0.3s forwards;
+      animation: fadeSlideUp 0.8s ease 0.3s forwards;
+    }
+
+    /* ── CLASE para transición al cambiar datos ── */
+    .fade-out { opacity: 0 !important; }
+  </style>
+</head>
+<body>
+  <div class="applet">
+
+    <div class="bg"></div>
+
+    <!-- Badge ID visible (opcional, quitar en producción) -->
+    <div class="id-badge">ID: <span id="id-visible">—</span></div>
+
+    <!-- Tarjeta principal -->
+    <div class="card">
+      <span class="badge">Producto</span>
+      <span id="campo-articulo">Cargando...</span>
+      <div class="sep"></div>
+      <div class="precio-wrap">
+        <span class="precio-simbolo">€</span>
+        <span id="campo-precio">—</span>
+        <span class="precio-label">IVA incluido</span>
+      </div>
+    </div>
+
+    <!-- Estado / mensajes -->
+    <div class="status" id="status-msg"></div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       CAMPOS EDITABLES NSIGN (ocultos)
+       El operador los configura desde el panel nsign
+       ══════════════════════════════════════════════ -->
+
+  <!-- ID del artículo a mostrar -->
+  <span id="filtro-id"
+        data-editable="text"
+        data-label="ID del artículo a mostrar"
+        data-help="Introduce el ID numérico del artículo del CSV que quieres mostrar en pantalla."
+        data-number='{"min":"1","max":"9999","step":"1"}'
+        data-csv-url=""
+        data-csv-cell=""
+        style="display:none">1</span>
+
+  <!-- URL del CSV -->
+  <span id="csv-url"
+        data-editable="text"
+        data-label="URL del archivo CSV"
+        data-help="URL completa o relativa al fichero CSV. Ejemplo: productos.csv o https://miservidor.com/datos.csv"
+        data-csv-url=""
+        data-csv-cell=""
+        style="display:none">productos.csv</span>
+
+  <!-- Etiqueta de precio (personalizable) -->
+  <span id="precio-label-text"
+        data-editable="text"
+        data-label="Texto junto al precio"
+        data-help="Texto descriptivo que aparece junto al precio. Ejemplo: IVA incluido, por unidad, etc."
+        data-csv-url=""
+        data-csv-cell=""
+        style="display:none">IVA incluido</span>
+
+  <!-- Símbolo de moneda -->
+  <span id="moneda-simbolo"
+        data-editable="text"
+        data-label="Símbolo de moneda"
+        data-options='["€","$","£","¥"]'
+        data-csv-url=""
+        data-csv-cell=""
+        style="display:none">€</span>
+
+  <!-- Log level (estándar nsign) -->
+  <span id="logLevel"
+        data-editable="text"
+        data-label="Log level"
+        data-options='["NONE","ERROR","WARNING","INFO","VERBOSE"]'
+        data-csv-url=""
+        data-csv-cell=""
+        style="display:none">ERROR</span>
+
+  <!-- Versión (estándar nsign) -->
+  <span id="showVersionSeconds"
+        data-editable="text"
+        data-label="Show version (sec.)"
+        data-number='{"min":0,"max":600,"step":1}'
+        data-csv-url=""
+        data-csv-cell=""
+        style="display:none">0</span>
+
+  <script>
+    var templateVersion = "1.0.0";
+
+    // ── Init nsignutils ──────────────────────────────────────────
+    window.appletSettings = window.parseEditables ? window.parseEditables() : {};
+
+    if (window.appletSettings && window.appletSettings.logLevel) {
+      window.debugMessages.init(window.appletSettings.logLevel, {
+        maxMessages: 10,
+        showDuringMsec: 6000
+      });
+    }
+
+    if (window.appletSettings && window.appletSettings.showVersionSeconds) {
+      window.showVersion(templateVersion, window.appletSettings.showVersionSeconds * 1000, null);
+    }
+
+    // ── Leer configuración editable ──────────────────────────────
+    var idFiltro   = parseInt(document.getElementById('filtro-id').innerText.trim()) || 1;
+    var urlCSV     = document.getElementById('csv-url').innerText.trim() || 'productos.csv';
+    var labelPrecio = document.getElementById('precio-label-text').innerText.trim();
+    var simbolo    = document.getElementById('moneda-simbolo').innerText.trim();
+
+    // Aplicar editables visuales
+    document.querySelector('.precio-label').textContent  = labelPrecio;
+    document.querySelector('.precio-simbolo').textContent = simbolo;
+    document.getElementById('id-visible').textContent    = idFiltro;
+
+    // ── Parser CSV simple (soporta comas dentro de comillas) ─────
+    function parseCSV(texto) {
+      var lineas = texto.trim().split('\n');
+      var resultado = [];
+      // Línea 0 = cabecera, empezamos en 1
+      for (var i = 1; i < lineas.length; i++) {
+        var linea = lineas[i].trim();
+        if (!linea) continue;
+        // Split respetando campos entre comillas
+        var cols = [];
+        var enComillas = false;
+        var campo = '';
+        for (var c = 0; c < linea.length; c++) {
+          var ch = linea[c];
+          if (ch === '"') {
+            enComillas = !enComillas;
+          } else if (ch === ',' && !enComillas) {
+            cols.push(campo.trim());
+            campo = '';
+          } else {
+            campo += ch;
+          }
+        }
+        cols.push(campo.trim()); // último campo
+        resultado.push(cols);
+      }
+      return resultado;
+    }
+
+    // ── Actualizar DOM con transición ────────────────────────────
+    function actualizarCampos(articulo, precio) {
+      var elArt  = document.getElementById('campo-articulo');
+      var elPre  = document.getElementById('campo-precio');
+
+      // Fade out
+      elArt.classList.add('fade-out');
+      elPre.classList.add('fade-out');
+
+      setTimeout(function() {
+        elArt.textContent = articulo;
+        elPre.textContent = precio;
+        // Fade in
+        elArt.classList.remove('fade-out');
+        elPre.classList.remove('fade-out');
+        window.debugMessages && window.debugMessages.info('Datos actualizados: ' + articulo + ' — ' + precio);
+      }, 400);
+    }
+
+    function mostrarError(msg) {
+      document.getElementById('campo-articulo').textContent = 'Sin datos';
+      document.getElementById('campo-precio').textContent   = '—';
+      document.getElementById('status-msg').textContent     = msg;
+      window.debugMessages && window.debugMessages.error(msg);
+    }
+
+    // ── Filtrar por ID y actualizar pantalla ─────────────────────
+    function procesarCSV(textoCSV) {
+      var filas = parseCSV(textoCSV);
+
+      if (!filas || filas.length === 0) {
+        mostrarError('CSV vacío o sin datos');
+        return;
+      }
+
+      var encontrado = false;
+      for (var i = 0; i < filas.length; i++) {
+        var fila = filas[i];
+        // Columnas esperadas: 0=id, 1=articulo, 2=precio
+        if (fila.length < 3) continue;
+        if (parseInt(fila[0]) === idFiltro) {
+          actualizarCampos(fila[1], fila[2]);
+          document.getElementById('status-msg').textContent = '';
+          encontrado = true;
+          break;
+        }
+      }
+
+      if (!encontrado) {
+        mostrarError('No se encontró el artículo con ID: ' + idFiltro);
+      }
+    }
+
+    // ── Carga del CSV ────────────────────────────────────────────
+    // Usa doGet() de nsignutils si está disponible (mejor para Android/CORS)
+    // Si no, usa fetch() estándar
+    function cargarCSV() {
+      window.debugMessages && window.debugMessages.info('Cargando CSV: ' + urlCSV);
+      document.getElementById('status-msg').textContent = 'Cargando...';
+
+      if (window.doGet) {
+        // ── Con nsignutils (player Android/Tizen/webOS) ──
+        window.doGet(urlCSV, true)
+          .then(function(texto) {
+            procesarCSV(texto);
+          })
+          .catch(function(error) {
+            window.debugMessages && window.debugMessages.error('Error doGet: ' + error);
+            // Fallback a fetch si doGet falla
+            cargarCSVFetch();
+          });
+      } else {
+        // ── Sin nsignutils (navegador estándar / desarrollo) ──
+        cargarCSVFetch();
+      }
+    }
+
+    function cargarCSVFetch() {
+      fetch(urlCSV + '?' + new Date().getTime()) // anti-cache
+        .then(function(r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.text();
+        })
+        .then(function(texto) {
+          procesarCSV(texto);
+        })
+        .catch(function(error) {
+          mostrarError('Error cargando CSV: ' + error);
+        });
+    }
+
+    // ── Arranque ─────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', function() {
+      cargarCSV();
+    });
+
+  </script>
+</body>
+</html>
