@@ -1,9 +1,16 @@
-id,articulo,precio,categoria
-1,Café Americano,1.50,Bebidas
-2,Café con Leche,1.80,Bebidas
-3,Cappuccinm,2.20,Bebidas
-4,Late,2.50,Bebidas
-5,Espresso,1.20,Bebidas
-6,Croissant,1.90,Pastelería
-7,Medialuna,1.60,Pastelería
-8,Muffin,2.10,Pastelería
+id,articulo,precio
+1,Café Americano,1.50
+2,Café con Leche,1.80
+3,Cappuccino,2.20
+4,Té Verde,1.60
+5,Zumo de Naranja Natural,2.50
+6,Agua Mineral 50cl,1.20
+7,Bocadillo de Jamón,3.50
+8,Bocadillo de Queso,3.20
+9,Tostada con Tomate,2.00
+10,Croissant de Mantequilla,1.90
+11,Tortilla Española,4.50
+12,Ensalada César,6.80
+13,Hamburguesa Clásica,7.50
+14,Menú del Día,10.90
+15,Refresco Lata,1.50
